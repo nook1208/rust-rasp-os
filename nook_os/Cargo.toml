@@ -1,0 +1,14 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+authors = ["Sunwook Eom <sunwook5492@gmail.com>"]
+edition = "2018"
+
+# The features section is used to select the target board.
+[features]
+default = []
+bsp_rpi3 = []
+bsp_rpi4 = []
+
+
+[dependencies]
