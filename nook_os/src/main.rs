@@ -1,7 +1,6 @@
 //! The `kernel` binary.
 
-#![feature(asm)]
-#![feature(global_asm)]
+#![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
 #![no_main]
@@ -21,6 +20,8 @@ mod print;
 ///
 /// - Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
-    println!("[0] Hello This is eom");
-    panic!("Kernel init is done.. So kill myself!!!");
+    println!("[0] Hello This is eom from pure Rust world !");
+    println!("[1] Stopping here !");
+
+    cpu::wait_forever();
 }
