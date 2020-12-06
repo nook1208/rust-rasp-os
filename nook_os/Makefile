@@ -65,7 +65,6 @@ qemu:
 	@echo "This board is not yet supported for QEMU."
 else
 qemu: $(KERNEL_BIN)
-	@echo "cmd: $(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)"
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 endif
 

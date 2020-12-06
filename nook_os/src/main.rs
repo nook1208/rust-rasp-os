@@ -3,6 +3,7 @@
 #![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
+#![feature(trait_alias)]
 #![no_main]
 #![no_std]
 
@@ -13,6 +14,7 @@ mod panic_wait;
 mod runtime_init;
 mod console;
 mod print;
+mod synchronization;
 
 /// Early init code.
 ///
@@ -20,8 +22,12 @@ mod print;
 ///
 /// - Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
+    use console::interface::Statistics;
+
     println!("[0] Hello This is eom from pure Rust world !");
-    println!("[1] Stopping here !");
+    println!("[1] Chars written: {}", bsp::console::console().chars_written());
+
+    println!("[2] Stopping here !");
 
     cpu::wait_forever();
 }
