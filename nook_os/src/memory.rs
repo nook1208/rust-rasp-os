@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//
+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2020 Sunwook Eom <sunwook5492@gmail.com>
+
 //! Memory Management
 
 use core::ops::Range;
