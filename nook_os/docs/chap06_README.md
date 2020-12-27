@@ -26,8 +26,20 @@ GPIO는 특정한 목적이 미리 정의되지 않으며 기본적으로는 사
 - [BCM2xxx](https://wikidocs.net/42377)  
 라즈베리 파이 모델에서 사용되는 브로드컴 칩의 네이밍이며 RPi4 에서는 BCM2711 을 사용한다.  
 
+- [MMIO](https://ko.wikipedia.org/wiki/%EB%A9%94%EB%AA%A8%EB%A6%AC_%EB%A7%B5_%EC%9E%85%EC%B6%9C%EB%A0%A5)  
+메모리 맵 입출력(영어: Memory-mapped I/O, MMIO)는 마이크로프로세서(CPU)가 입출력 장치를 액세스할 때, 입출력과 메모리의 주소 공간을 분리하지 않고 하나의 메모리 공간에 취급하여 배치하는 방식이다.
+따라서 전체 메모리의 주소공간에 입출력 장치의 메모리나 레지스터를 메모리로 취급하여 전체 메모리의 일부분으로 특정영역에 할당하여 배치하는 방식이다.
+입출력 장치의 메모리 주소가 나뉘어 있지 않기 때문에 액세스할 때는 메모리와 같은 주소공간이므로 같은 기계어 코드로 수행한다.
 
 ## Code analysis
+### bsp::device_driver
+- [PhantomData](https://doc.rust-lang.org/std/marker/struct.PhantomData.html)  
+사용되지 않는 데이터에 대한 컴파일러의 불평을 잠재울 수 있는 일종의 "더미" 데이터이다.
+
+- [Self](https://stackoverflow.com/questions/32304595/whats-the-difference-between-self-and-self)  
+Self 는 현재 object 의 type 이다.
+
+
 ### 'register' crate added
 GPIO 관련 코드에서 [register crate](https://github.com/rust-embedded/register-rs) 를 사용하여 각종 레지스터들을 정의하는데   
 여기서 사용되는 API 는 [Tock Register Interface](https://github.com/tock/tock/tree/master/libraries/tock-register-interface) 이며 사용방법과 API의 대략적인 정리가 필요하다.  
