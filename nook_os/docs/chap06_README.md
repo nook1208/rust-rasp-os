@@ -1,3 +1,5 @@
+# Tutorial 06 - Drivers: GPIO and UART
+
 ## tl;dr
 - 첫 번째 실제 디바이스 드라이버를 추가하기 위한 인프라 구축  
 - 마법과도 같던 QEMU 콘솔을 버리고 진짜 `UART` 를 사용함
@@ -32,6 +34,71 @@ GPIO는 특정한 목적이 미리 정의되지 않으며 기본적으로는 사
 입출력 장치의 메모리 주소가 나뉘어 있지 않기 때문에 액세스할 때는 메모리와 같은 주소공간이므로 같은 기계어 코드로 수행한다.
 
 ## Code analysis
+### 'register' crate added
+GPIO 관련 코드에서 [register crate](https://github.com/rust-embedded/register-rs) 를 사용하여 각종 레지스터들을 정의하는데 여기서 사용되는 API 는 [Tock Register Interface](https://github.com/tock/tock/tree/master/libraries/tock-register-interface) 이다.
+
+#### Example :
+특정 device 의 register 에 대한 memory map view 가 아래와 같다고 가정해보자:  
+|Address offset | Register Name | Description | Size |
+|--|--|--|--|
+|0x28 | FBRD | Fractional Baud rate divisor| 32 bit|
+|0x2c | LCRH | Line Control register | 32 bit|
+
+또한 각 레지스터의 bit field 는 아래 명세를 따른다고 가정해보자:  
+
+[5:0] FBRD The fractional baud rate divisor.   
+
+[6:5] WLEN Word length.  
+These bits indicate the number of data bits transmitted or received in a frame as follows:  
+b11 = 8 bits  
+b10 = 7 bits  
+b01 = 6 bits  
+b00 = 5 bits.  
+
+이러한 register field 는register crate 을 통해 아래와 같이 구현될 수 있다.
+```rust
+register_bitfields! {
+    // First parameter is the register width. Can be u8, u16, u32, or u64.
+    u32,
+
+
+    // Each subsequent parameter is a register abbreviation, its descriptive
+    // name, and its associated bitfields.
+    // The descriptive name defines this 'group' of bitfields. Only registers
+    // defined as ReadWrite<_, Control::Register> can use these bitfields.
+
+    // Bitfields are defined as:
+    // name OFFSET(shift) NUMBITS(num) [ /* optional values */ ]
+
+    /// Fractional Baud rate divisor
+    FBRD [
+        /// Fractional Baud rate divisor
+        FBRD OFFSET(0) NUMBITS(6) []
+    ],
+
+    /// Line Control register
+    LCRH [
+        /// Word length. These bits indicate the number of data bits transmitted or received in a
+        /// frame.
+        WLEN OFFSET(5) NUMBITS(2) [
+            FiveBit = 0b00,
+            SixBit = 0b01,
+            SevenBit = 0b10,
+            EightBit = 0b11
+        ]
+    ]
+}
+
+register_structs! {
+    #[allow(non_snake_case)]
+    pub RegisterBlock {
+        (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
+        (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
+        (0x30 => @END),
+    }
+}
+```
+
 ### bsp::device_driver
 - [PhantomData](https://doc.rust-lang.org/std/marker/struct.PhantomData.html)  
 사용되지 않는 데이터에 대한 컴파일러의 불평을 잠재울 수 있는 일종의 "더미" 데이터이다.
@@ -39,12 +106,15 @@ GPIO는 특정한 목적이 미리 정의되지 않으며 기본적으로는 사
 - [Self](https://stackoverflow.com/questions/32304595/whats-the-difference-between-self-and-self)  
 Self 는 현재 object 의 type 이다.
 
+### bsp::device_driver::bcm::bcm2xxx_pl011_uart
+RPi4 에서 사용하는 PL011 UART 디바이스의 드라이버 코드 구현부이다.  
 
-### 'register' crate added
-GPIO 관련 코드에서 [register crate](https://github.com/rust-embedded/register-rs) 를 사용하여 각종 레지스터들을 정의하는데   
-여기서 사용되는 API 는 [Tock Register Interface](https://github.com/tock/tock/tree/master/libraries/tock-register-interface) 이며 사용방법과 API의 대략적인 정리가 필요하다.  
+- RegisterBlock   
+[BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf](https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf)  문서 상에 UART register view 가 있고, 그에 맞게 UART 에서 각 레지스터의 offset 과 각 레지스터 내에서의 field 별 bit view 가 설명되어 있다. 이를 참고하여 RegisterBlock 구조체를 구현하였다.
 
-Analyzing...
+
+
+
 
 
 	
