@@ -132,3 +132,92 @@ register_structs! {
 
 /// Abstraction for the associated MMIO registers.
 type Registers = MMIODerefWrapper<RegisterBlock>;
+
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
+pub struct PL011UartInner {
+    registers: Registers,
+    chars_written: usize,
+    chars_read: usize,
+}
+
+// Export the inner struct so that BSPs can use it for the panic handler.
+pub use PL011UartInner as PanicUart;
+
+/// Representation of the UART.
+pub struct PL011Uart {
+    inner: NullLock<PL011UartInner>,
+}
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
+impl PL011UartInner {
+    /// Create an instance.
+    ///
+    /// # Safety
+    ///
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
+        Self {
+            registers: Registers::new(mmio_start_addr),
+            chars_written: 0,
+            chars_read: 0,
+        }
+    }
+
+
+    /// Set up baud rate and characteristics.
+    ///
+    /// The calculation for the BRD given a target rate of 2300400 and a clock set to 48 MHz is:
+    /// `(48_000_000/16)/230400 = 13,02083`. `13` goes to the `IBRD` (integer field). The `FBRD`
+    /// (fractional field) is only 6 bits so `0,0208*64 = 1,3312 rounded to 1` will give the best
+    /// approximation we can get. A 5 % error margin is acceptable for UART and we're now at 0,01 %.
+    ///
+    /// This results in 8N1 and 230400 baud (we set the clock to 48 MHz in config.txt).
+    pub fn init(&mut self) {
+        // Turn it off temporarily.
+        self.registers.CR.set(0);
+
+        self.registers.ICR.write(ICR::ALL::CLEAR);
+        self.registers.IBRD.write(IBRD::IBRD.val(13));
+        self.registers.FBRD.write(FBRD::FBRD.val(1));
+        self.registers.LCRH.write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled);
+        self.registers.CR.write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
+    }
+
+    /// Send a character.
+    fn write_char(&mut self, c: char) {
+        // Spin while TX FIFO full is set, waiting for an empty slot.
+        while self.registers.FR.matches_all(FR::TXFF::SET) {
+            cpu::nop();
+        }
+
+        // Write the character to the buffer.
+        self.registers.DR.set(c as u32);
+
+        self.chars_written += 1;
+    }
+}
+
+/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
+/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
+/// we get `write_fmt()` automatically.
+///
+/// The function takes an `&mut self`, so it must be implemented for the inner struct.
+///
+/// See [`src/print.rs`].
+///
+/// [`src/print.rs`]: ../../print/index.html
+impl fmt::Write for PL011UartInner {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for c in s.chars() {
+            self.write_char(c);
+        }
+
+        Ok(())
+    }
+}
