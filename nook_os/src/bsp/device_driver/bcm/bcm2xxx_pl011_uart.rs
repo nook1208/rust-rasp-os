@@ -5,6 +5,11 @@
 
 //! PL011 UART driver.
 
+use crate::{
+    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
+    synchronization::NullLock,
+};
+use core::fmt;
 use register::{mmio::*, register_bitfields, register_structs};
 
 //--------------------------------------------------------------------------------------------------
@@ -219,5 +224,82 @@ impl fmt::Write for PL011UartInner {
         }
 
         Ok(())
+    }
+}
+
+impl PL011Uart {
+    /// # Safety
+    ///
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
+        Self {
+            inner: NullLock::new(PL011UartInner::new(mmio_start_addr)),
+        }
+    }
+}
+
+//------------------------------------------------------------------------------
+// OS Interface Code
+//------------------------------------------------------------------------------
+use synchronization::interface::Mutex;
+
+impl driver::interface::DeviceDriver for PL011Uart {
+    fn compatible(&self) -> &'static str {
+        "BCM PL011 UART"
+    }
+
+    unsafe fn init(&self) -> Result<(), &'static str> {
+        self.inner::lock(|inner| inner.init());
+
+        Ok(());
+    }
+}
+
+impl console::interface::Write for PL011Uart {
+    /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
+    /// serialize access.
+    fn write_char(&self, c: char) {
+        self.inner.lock(|inner| inner.write_char(c));
+    }
+
+    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
+        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
+        // readability.
+        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
+    }
+}
+
+impl console::interface::Read for PL011Uart {
+    // TODO: How about writing read_char() to PL011UartInner ?
+    fn read_char(&self) -> char {
+        self.inner.lock(|inner| {
+            // Spin while RX FIFO empty is set.
+            while inner.registers.FR.matches_all(FR::RXFE::SET) {
+                cpu::nop();
+            }
+
+            // Read one character.
+            let mut ret = inner.registers.DR.get() as u8 as char;
+
+            // Convert carrige return to newline.
+            if ret == '\r' {
+                ret = '\n'
+            }
+
+            // Update statistics.
+            inner.chars_read += 1;
+
+            ret
+        })
+    }
+}
+
+impl console::interface::Statistics for PL011Uart {
+    fn chars_written(&self) -> usize {
+        self.inner.lock(|inner| inner.chars_written)
+    }
+
+    fn chars_read(&self) -> usize {
+        self.inner.lock(|inner| inner.chars_read)
     }
 }
