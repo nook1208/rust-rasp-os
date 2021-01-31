@@ -124,7 +124,7 @@ RPi4 에서 사용하는 PL011 UART 디바이스의 드라이버 코드 구현�
 
 
 
-## references
+## References
 - [rust-raspberrypi-OS-tutorials's chap 6 README.md](https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/tree/master/06_drivers_gpio_uart) 
 - [rust lifetime](rust_lifetime.md)
 
