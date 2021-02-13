@@ -1,28 +1,36 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
-// Copyright (c) 2020 Sunwook Eom <sunwook5492@gmail.com>
+// Copyright (c) 2020-2021 Sunwook Eom <sunwook5492@gmail.com>
 
 //! Rust runtime initialization code.
-use crate::memory;
-use core::ops::Range;
 
-unsafe fn get_bss_range() -> Range<*mut usize> {
-    extern "C" {
-        static mut __bss_start: usize;
-        static mut __bss_end: usize;
-    }
+use crate::{bsp, memory};
 
-    Range {
-        start: &mut __bss_start,
-        end: &mut __bss_end,
-    }
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
+
+/// Zero out the .bss section.
+///
+/// # Safety
+///
+/// - Must only be called pre `kernel_init()`.
+#[inline(always)]
+unsafe fn zero_bss() {
+    memory::zero_volatile(bsp::memory::bss_range_inclusive());
 }
 
-unsafe fn zero_bss(){
-    memory::zero_volatile(get_bss_range());
-}
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
 
+/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
+/// init code.
+///
+/// # Safety
+///
+/// - Only a single core must be active and running this function.
 pub unsafe fn runtime_init() -> ! {
     zero_bss();
 

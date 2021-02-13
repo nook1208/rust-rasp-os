@@ -9,7 +9,7 @@ use cortex_a::{asm, regs::*};
 use crate::{bsp, cpu};
 
 //--------------------------------------------------------------------------------------------------
-// Public Code
+// Boot Code
 //--------------------------------------------------------------------------------------------------
 
 /// The entry of the `kernel` binary.
@@ -21,11 +21,10 @@ use crate::{bsp, cpu};
 /// - Linker script must ensure to place this function where it is expected by the target machine.
 /// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
 ///   actually set (`SP.set()`).
-#[naked]
 #[no_mangle]
 pub unsafe fn _start() -> ! {
     if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
-        SP.set(bsp::memory::BOOT_CORE_STACK_START as u64);
+        SP.set(bsp::memory::boot_core_stack_end() as u64);
         crate::runtime_init::runtime_init();
     } else {
         wait_forever();
