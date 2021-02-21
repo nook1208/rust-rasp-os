@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
-// Copyright (c) 2020 Sunwook Eom <sunwook5492@gmail.com>
+// Copyright (c) 2020-2021 Sunwook Eom <sunwook5492@gmail.com>
 
 //! System console.
 
@@ -44,5 +44,5 @@ pub mod interface {
     }
 
     /// Trait alias for a full-fledged console.
-    pub trait All = Write + Statistics;
+    pub trait All = Write + Read + Statistics;
 }
