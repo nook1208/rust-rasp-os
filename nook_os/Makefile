@@ -3,8 +3,8 @@
 ## Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 ## Copyright (c) 2020 Sunwook Eom <sunwook5492@gmail.com>
 
-# Default to the RPi3
-BSP ?= rpi3
+# Default to the RPi4
+BSP ?= rpi4
 
 # Default to a serial device name that is common in Linux.
 DEV_SERIAL ?= /dev/ttyUSB0
